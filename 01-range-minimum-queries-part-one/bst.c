@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
-typedef struct Node {
+struct Node {
   int value;
   struct Node* left;
   struct Node* right;
