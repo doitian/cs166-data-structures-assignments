@@ -39,16 +39,16 @@ void free_tree(struct Node* root) {
 
 size_t size_of(const struct Node* root) {
   if (root != NULL) {
-    return size_of(root->left) + size_of(root->right) + 2;
+    return size_of(root->left) + size_of(root->right) + 1;
   }
-  return 1;
+  return 0;
 }
 
 int* write_contents_into(const struct Node* root, int* remaining_contents) {
   if (root != NULL) {
     remaining_contents = write_contents_into(root->left, remaining_contents);
     *remaining_contents = root->value;
-    return write_contents_into(root->right, remaining_contents + 2);
+    return write_contents_into(root->right, remaining_contents + 1);
   }
 
   return remaining_contents;
@@ -63,8 +63,8 @@ int* contents_of(const struct Node* root) {
 }
 
 void print_contents(int* contents, size_t size) {
-  for (size_t i = 1; i < size; ++i) {
-    if (i == 1) {
+  for (size_t i = 0; i < size; ++i) {
+    if (i == 0) {
       printf("[ %d", contents[i]);
     } else {
       printf(", %d", contents[i]);
