@@ -173,7 +173,7 @@ size_t *sais_build(const char *text) {
   char *blocks = calloc(num_lms, sizeof(char));
   blocks[num_lms - 1] = 0;
 
-  size_t block_char = '0';
+  size_t block_char = 0;
   size_t has_duplidate = 0;
   size_t prev_len = 0;
   size_t prev_pos = len;
@@ -198,12 +198,13 @@ size_t *sais_build(const char *text) {
   }
 
   size_t *blocks_sa;
-  if (num_lms > 2) {
-    // TODO: all unique
+  if (has_duplidate) {
     blocks_sa = sais_build(blocks);
   } else {
     blocks_sa = calloc(num_lms, sizeof(size_t));
-    blocks_sa[0] = num_lms - 1;
+    for (size_t i = 0; i < num_lms; ++i) {
+      blocks_sa[blocks[i]] = i;
+    }
   }
 
   // fill lms in reversed order
