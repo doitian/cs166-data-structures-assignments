@@ -23,7 +23,7 @@ struct Skiplist *skiplist_new() {
   return head;
 }
 
-void skiplist_increase_height(struct Skiplist* list) {
+void skiplist_increase_height(struct Skiplist *list) {
   if (list->height == list->capacity) {
     list->capacity *= 2;
     list->links = realloc(list->links, list->capacity * sizeof(struct Skiplist *));
@@ -82,37 +82,121 @@ size_t skiplist_distance(struct Skiplist *start, struct Skiplist *end, size_t la
   return distance;
 }
 
-void skiplist_try_promote(struct Skiplist *list, struct Skiplist **vec, size_t layer) {
+void skiplist_try_upgrade(struct Skiplist *list, struct Skiplist **vec, size_t layer) {
   if (layer + 1 < list->height) {
     struct Skiplist *left = vec[layer + 1];
     struct Skiplist *right = left->links[layer + 1];
     if (skiplist_distance(left, right, layer) > 4) {
-      // promote the second
-      struct Skiplist *promoted = left->links[layer]->links[layer];
-      skiplist_increase_height(promoted);
-      promoted->links[layer + 1] = right;
-      left->links[layer + 1] = promoted;
-      skiplist_try_promote(list, vec, layer + 1);
+      // upgrade the second
+      struct Skiplist *upgraded = left->links[layer]->links[layer];
+      skiplist_increase_height(upgraded);
+      upgraded->links[layer + 1] = right;
+      left->links[layer + 1] = upgraded;
+      skiplist_try_upgrade(list, vec, layer + 1);
     }
   } else if (skiplist_distance(list, 0, layer) > 4) {
-    struct Skiplist *promoted = list->links[layer]->links[layer];
+    struct Skiplist *upgraded = list->links[layer]->links[layer];
     skiplist_increase_height(list);
-    skiplist_increase_height(promoted);
-    promoted->links[layer + 1] = 0;
-    list->links[layer + 1] = promoted;
+    skiplist_increase_height(upgraded);
+    upgraded->links[layer + 1] = 0;
+    list->links[layer + 1] = upgraded;
   }
 }
 
-void *skiplist_insert(struct Skiplist *list, int val) {
+void skiplist_insert(struct Skiplist *list, int val) {
   struct Skiplist **vec = skiplist_locate(list, val);
   // Insert into layer 1
   struct Skiplist *node = skiplist_new();
   node->value = val;
   node->links[0] = vec[0]->links[0];
   vec[0]->links[0] = node;
-  
-  skiplist_try_promote(list, vec, 0);
-  
+
+  skiplist_try_upgrade(list, vec, 0);
+
+  free(vec);
+}
+
+void skiplist_downgrade(struct Skiplist *list, struct Skiplist **vec, size_t layer) {
+  if (layer + 1 < list->height) {
+    struct Skiplist *left = vec[layer + 1];
+    struct Skiplist *right = vec[layer + 1]->links[layer + 1];
+
+    if (skiplist_distance(left, right, layer) == 1) {
+      int downgraded = 0;
+      
+      if (right != 0 && right->height == layer + 2) {
+        left->links[layer + 1] = right->links[layer + 1];
+        --right->height;
+        right = left->links[layer + 1];
+        downgraded = 1;
+      } else if (left->height == layer + 2) {
+        // Need to find the prev node of left, the update vec element in the upper layer is a good start.
+        struct Skiplist *prev = layer + 2 < list->height ? vec[layer + 2] : list;
+        while (prev != 0 && prev->links[layer + 1] != left) {
+          prev = prev->links[layer + 1];
+        }
+        if (prev != 0) {
+          prev->links[layer + 1] = right;
+          --left->height;
+          left = prev;
+          downgraded = 1;
+        }
+      }
+      
+      if (downgraded) {
+        // Check reflow
+        if (skiplist_distance(left, right, layer) == 4) {
+          // upgrade the 2nd
+          struct Skiplist *upgraded = left->links[layer]->links[layer];
+          skiplist_increase_height(upgraded);
+          upgraded->links[layer + 1] = left->links[layer + 1];
+          left->links[layer + 1] = upgraded;
+        } else {
+          skiplist_downgrade(list, vec, layer + 1);
+        }
+      }
+    }
+  } else if (skiplist_distance(list, 0, layer) == 1) {
+    // No more topmost layer nodes
+    --list->height;
+  }
+}
+
+void skiplist_remove(struct Skiplist *list, int val) {
+  struct Skiplist **vec = skiplist_locate(list, val);
+
+  if (vec[0]->links[0] != 0 && vec[0]->links[0]->value == val) {
+    struct Skiplist *prev = vec[0];
+    struct Skiplist *remove = prev->links[0];
+
+    if (prev->links[0]->height == 1) {
+      prev->links[0] = prev->links[0]->links[0];
+      free(remove->links);
+      free(remove);
+    } else {
+      struct Skiplist *next = remove->links[0];
+      assert(next != 0 && next->height == 1);
+
+      // swap with the next node
+      for (size_t i = 0; i < remove->height; ++i) {
+        assert(vec[i]->links[i] == remove);
+        vec[i]->links[i] = next;
+        vec[i] = next;
+      }
+
+      remove->links[0] = next->links[0];
+      free(next->links);
+      next->links = remove->links;
+      next->height = remove->height;
+      next->capacity = remove->capacity;
+
+      free(remove);
+    }
+
+    // now node has been removed, re-balance the tree
+    skiplist_downgrade(list, vec, 0);
+  }
+
   free(vec);
 }
 
@@ -157,7 +241,7 @@ void skiplist_debug(struct Skiplist *list) {
 int main() {
   struct Skiplist *list = skiplist_new();
   skiplist_debug(list);
-  
+
   skiplist_insert(list, 15);
   skiplist_insert(list, 17);
   skiplist_insert(list, 19);
@@ -181,6 +265,21 @@ int main() {
   assert(skiplist_search(list, 10) == 0);
   assert(skiplist_search(list, 0) == 0);
   assert(skiplist_search(list, 21) == 0);
+
+  skiplist_remove(list, 8);
+  skiplist_remove(list, 7);
+  skiplist_remove(list, 1);
+  skiplist_remove(list, 9);
+  skiplist_remove(list, 3);
+  skiplist_remove(list, 5);
+  skiplist_remove(list, 19);
+  skiplist_remove(list, 20);
+  skiplist_remove(list, 17);
+  skiplist_remove(list, 15);
+  skiplist_remove(list, 11);
+  skiplist_remove(list, 13);
+
+  skiplist_debug(list);
 
   skiplist_free(list);
 }
