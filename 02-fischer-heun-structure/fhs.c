@@ -237,9 +237,9 @@ size_t fhs_query(struct fhs_t *fhs, size_t i, size_t j) {
 void fhs_assert(struct fhs_t *fhs, size_t i, size_t j, size_t expect) {
   size_t actual = fhs_query(fhs, i, j);
   if (actual == expect) {
-    printf("Expect RMQ(%d, %d) = A[%d]: pass\n", i, j - 1, actual);
+    printf("Expect RMQ(%zu, %ld) = A[%zu]: pass\n", i, ((long)j) - 1, actual);
   } else {
-    printf("Expect RMQ(%d, %d) = A[%d]: fail, got %d\n", i, j - 1, expect, actual);
+    printf("Expect RMQ(%zu, %ld) = A[%zu]: fail, got %zu\n", i, ((long)j) - 1, expect, actual);
     for (size_t k = i; k < j; ++k) {
       if (k == i) {
         printf("[ %d%s", fhs->arr[k], k == expect ? "*" : (k == actual ? "x" : " "));

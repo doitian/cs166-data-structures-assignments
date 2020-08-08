@@ -19,7 +19,7 @@ void print_sa(const size_t *sa, size_t len) {
 /// \return number of occurrences of pattern in text.
 size_t sais_search_for(const char *pattern, const char *text, const size_t *sa, const size_t **positions) {
   if (positions != 0 && *positions != 0) {
-    free(*positions);
+    free((void *) *positions);
     *positions = 0;
   }
 
@@ -59,7 +59,7 @@ void test_search_for() {
   const char *text = "ABANANABANDANA";
   size_t sa[] = {14, 13, 0, 6, 11, 4, 2, 8, 1, 7, 10, 12, 5, 3, 9};
 
-  size_t *positions = 0;
+  const size_t *positions = 0;
   size_t occurrences = sais_search_for("ANA", text, sa, &positions);
 
   assert(occurrences == 3);

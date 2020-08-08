@@ -108,7 +108,7 @@ int main() {
   int* contents = contents_of(root);
   print_contents(contents, size_of(root));
 
-  struct Node* second_min = second_min_in(root);
+  const struct Node* second_min = second_min_in(root);
   printf("second min is %d\n", second_min->value);
 
   free_tree(root);
