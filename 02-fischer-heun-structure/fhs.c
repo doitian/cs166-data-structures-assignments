@@ -108,7 +108,10 @@ void fhs_build_block_rmqs(struct fhs_t *fhs) {
   int *stack = (int *) malloc(sizeof(size_t) * fhs->block_size);
 
   for (int i = 0; i < fhs->num_blocks; ++i) {
-    size_t actual_block_size = i + 1 != fhs->num_blocks ? fhs->block_size : (fhs->size % fhs->block_size);
+    size_t actual_block_size = fhs->block_size;
+    if (i + 1 == fhs->num_blocks && fhs->size % fhs->block_size != 0) {
+      actual_block_size = fhs->size % fhs->block_size;
+    }
     size_t cartesian_number = fhs_cartesian_number(fhs->arr + i * fhs->block_size, actual_block_size, stack);
     cartesian[i] = cartesian_number;
     if (rmqs[cartesian_number] == 0) {
@@ -192,7 +195,10 @@ size_t fhs_query_summary(struct fhs_t *fhs, size_t block_i, size_t block_j) {
 }
 
 size_t fhs_query_block(struct fhs_t *fhs, size_t block, size_t i, size_t j) {
-  size_t actual_block_size = block + 1 != fhs->num_blocks ? fhs->block_size : (fhs->size % fhs->block_size);
+  size_t actual_block_size = fhs->block_size;
+  if (i + 1 == fhs->num_blocks && fhs->size % fhs->block_size != 0) {
+    actual_block_size = fhs->size % fhs->block_size;
+  }
   size_t cartesian_number = fhs->cartesian[block];
   size_t* rmq = fhs->block_rmqs[cartesian_number];
 
